@@ -61,7 +61,7 @@ make
 ### SSD1306 OLED DISPLAY
 #### This project uses a custom software that has been with me a long time. An 8x5 bit font array is loaded that is used to extract eight single or double sized pixel images to be transferred to the display. The configuration of the SSD1306 is completed with the ssd1306_init() command. The command ssd1306_text(str_text) writes text to the display - examples:
 ```C
-   sprintf(disp_string, “4Top Line 2X|||1  value1=%d|   value2=%4.2fmsec||4LastLine”, value1, value2);
+   sprintf(disp_string, “4Top Line 2X|||1  value1=%d|   value2=%4.2fmsec||4LastLine”, 17, 2.71828);
    ssd1306(disp_sting);
 ```
 #### This will cause Top Line to be displayed at beginning of top line in double size, then it advances three lines - two lines to make up for the two lines used and a blank line, the next line is in small text and displays <space>value1=<value1>, then another line advance for the line used and <3xspace>value2=<value2 float> and finally LastLine is printed out in double size. Basically, any ‘|’ resets column pointer, each ‘|’ advances row pointer, when number 1 or 4 is in column 0 position text is either printed single or doubled size. It looks like this:
