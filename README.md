@@ -81,8 +81,7 @@ The magnetic field of the earth at any one point is not large compared to say a 
 
 Calibration of the magnetometer requires the collection of a fairly substantial amount of data collected from the magnetometer while the device is being basically pitched, rolled and yawed over 360 degrees on three axes (there must be a trick to this). The data should be stored in a file with three columns (x, y and z) - lets say a data file is named ‘data’. An easy way to analyze and extract calibration parameters is by using Gnuplot. The gnuplot command `splot ‘data’ 1:2:3` will show a 3 dimensional plot of the data points, rotating the plot with the four arrow keys will show if the data has a basic spherical shape with all corners of the sphere represented. 
     
-<img src="https://user-images.githubusercontent.com/32702163/225654806-caa31fa8-141b-4957-ada6-b45d7e906bfa.png" width="400" />
-    
+<img src="https://user-images.githubusercontent.com/32702163/225654806-caa31fa8-141b-4957-ada6-b45d7e906bfa.png" width="400" />   
 The gnuplot command `stats ‘data’ using 1` will show statistical calculations for column 1 including min and max. The min and max numbers for each of the axes are the calibration data - which will need to be entered into the program. Once the calibration data is entered and new calibration data collected, the new data displayed with gnuplot should show a sphere of radius 1 centered at 0,0,0.
 ```C
 #define PI 3.14159
