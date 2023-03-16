@@ -2,9 +2,11 @@
 
 ## RPi PICO / RP2040 IMU
 
+#### The IMU shown here uses two native rp2040 buses, one SPI and one I2C, to drive a 6 axis accelerometer/gyroscope, a 3 axis magnetomter, a pressure measurement chip and a 1 inch oled display. My implementation uses a Seeedi np2040, mcp9250, qmc5883, bmp280 and a ssd1306 modules breadboard assembly. OLED screen updates are made twice a second and include fused filtered accelerometer/gyroscope pitch/roll, magnetic heading and a pressure based altitude measurements. A usb serial port can supply higher measurement rates: magnetic readings up to 200HZ, altitude to 1Hz and pitch/roll well over 1KHz.  
+
 ### RPi PICO/RP2040 SSD FRAMEWORK
 
-#### This project uses the PICO SDK environment (in a linux environment), for simplicity, without any specific IDE. The installation of the SDK is well documented elsewhere, varies by OS and is a half dozen steps. The github repository contains all other c programs, cmake files, shell scripts and include files required. The I2C SCK is on RP2040 gpio pin 7 and SDA is on gpio pin 6.
+#### This project uses the PICO SDK (in a linux environment), for simplicity without any specific IDE. The installation of the SDK is well documented here https://www.raspberrypi.com/documentation/microcontrollers/c_sdk.html. This github repository contains all other c programs, cmake files, shell scripts and include files required. The I2C SCK is on RP2040 gpio pin 7 and SDA is on gpio pin 6.
 
 #### The steps required to run the project from my linux directory are:
 ```
