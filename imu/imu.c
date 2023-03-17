@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <math.h>
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
@@ -51,22 +52,27 @@ int main() {
     qmc5883_init();   
     bmp280_cal();
     int count = 0;
+    absolute_time_t systimenext=0;
     float prescal;
     while(1) {
-        qmc5883_read();   
-        bmp280_read();
-	if (count < 5)  prescal = pres;
-        //i2c_scan();
-        //    pio_sm_put_blocking(0, 0, 0x808080);
-        int blue = gpio_get(LED_BLUE);
-        if (blue == 0) blue = 1; else blue = 0;
-        gpio_put(LED_BLUE, blue);
+        if(get_absolute_time() > systimenext) {
+           printf("%11.4f   ", 0.000001 * get_absolute_time());
+           systimenext = systimenext + 500000;
+           qmc5883_read();   
+           bmp280_read();
+	   if (count < 5)  prescal = pres;
+           //i2c_scan();
+           //    pio_sm_put_blocking(0, 0, 0x808080);
+           int blue = gpio_get(LED_BLUE);
+           if (blue == 0) blue = 1; else blue = 0;
+           gpio_put(LED_BLUE, blue);
 
-        sprintf(disp_string, "4 IMU %5d||1 %4.2f %4.2f %4.2f||1pres=%5dmb  %6.1f", 
-           count/2, radius, theta, psi, (int)pres, (prescal-pres)/.038);
-        ssd1306_text(disp_string);
-        sleep_ms(500);
-	++count;
+           sprintf(disp_string, "4 IMU %5d||1 %4.2f %4.2f %4.2f||1pres=%5dmb  %6.1f", 
+              count/2, radius, theta, psi, (int)pres, (prescal-pres)/.038);
+           ssd1306_text(disp_string);
+	   ++count;
+	}
+	sleep_us(1000); //just in case the compiler doesn't
     }
     return 0;
 }
