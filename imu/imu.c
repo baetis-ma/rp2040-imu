@@ -9,6 +9,7 @@
 #include "hardware/i2c.h"
 #include "hardware/pio.h"
 #include "hardware/gpio.h"
+#include "hardware/spi.h"
 //#include "led3.pio.h"
 
 #define QMC5883L_I2C_ADDR  0x0d
@@ -33,15 +34,15 @@ int main() {
     stdio_init_all();
     sleep_ms(2000);
     printf("waited 2 seconds\n");
+    absolute_time_t systimenext = 0;
 
-    //set ws2812 pio driver
-//    uint offset = pio_add_program(0, &ws2812_program);
-//    ws2812_program_init(0, 0, offset, WS2812_PIN);
-
-    //gpios
+    //gpios init
     gpio_init(LED_BLUE); gpio_set_dir(LED_BLUE, GPIO_OUT); gpio_put(LED_BLUE, 1);
     gpio_init(LED_GREEN); gpio_set_dir(LED_GREEN, GPIO_OUT); gpio_put(LED_GREEN, 1);
     gpio_init(LED_RED); gpio_set_dir(LED_RED, GPIO_OUT); gpio_put(LED_RED, 1);
+    //set ws2812 pio driver
+    //uint offset = pio_add_program(0, &ws2812_program);
+    //ws2812_program_init(0, 0, offset, WS2812_PIN);
     gpio_init(I2C_POWER); gpio_set_dir(I2C_POWER, GPIO_OUT); gpio_put(I2C_POWER, 1);
 
     i2c_start();
@@ -51,8 +52,11 @@ int main() {
     ssd1306_text(disp_string);
     qmc5883_init();   
     bmp280_cal();
+    //spi interface setup
+    //sdk spi, dma, ipterupt service
+    float pitch, roll, yaw;
+    
     int count = 0;
-    absolute_time_t systimenext=0;
     float prescal;
     while(1) {
         if(get_absolute_time() > systimenext) {
