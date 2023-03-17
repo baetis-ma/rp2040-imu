@@ -44,23 +44,29 @@ int main() {
     gpio_init(I2C_POWER); gpio_set_dir(I2C_POWER, GPIO_OUT); gpio_put(I2C_POWER, 1);
 
     i2c_start();
+    sleep_ms(10);
     ssd1306_init();
-    char disp_string[256] = "|4 Hi There";
+    char disp_string[256] = "Hi There";
     ssd1306_text(disp_string);
     qmc5883_init();   
     bmp280_cal();
-while(1) {
-    qmc5883_read();   
-    bmp280_read();
-    //i2c_scan();
-    //    pio_sm_put_blocking(0, 0, 0x808080);
-    int blue = gpio_get(LED_BLUE);
-    if (blue == 0) blue = 1; else blue = 0;
-    gpio_put(LED_BLUE, blue);
+    int count = 0;
+    float prescal;
+    while(1) {
+        qmc5883_read();   
+        bmp280_read();
+	if (count < 5)  prescal = pres;
+        //i2c_scan();
+        //    pio_sm_put_blocking(0, 0, 0x808080);
+        int blue = gpio_get(LED_BLUE);
+        if (blue == 0) blue = 1; else blue = 0;
+        gpio_put(LED_BLUE, blue);
 
-    sprintf(disp_string, "4   IMU||1 %4.2f %4.2f %4.2f||1pres=%6.1f", radius, theta, psi, pres);
-    ssd1306_text(disp_string);
-    sleep_ms(1000);
-}
+        sprintf(disp_string, "4 IMU %5d||1 %4.2f %4.2f %4.2f||1pres=%5dmb  %6.1f", 
+           count/2, radius, theta, psi, (int)pres, (prescal-pres)/.038);
+        ssd1306_text(disp_string);
+        sleep_ms(500);
+	++count;
+    }
     return 0;
 }
