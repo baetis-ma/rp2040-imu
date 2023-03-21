@@ -20,6 +20,7 @@ target_link_libraries(picocode
      pico_stdlib
      hardware_pio
      hardware_i2c     
+     hardware_spi     
 )
 
 pico_enable_stdio_usb(picocode 1)

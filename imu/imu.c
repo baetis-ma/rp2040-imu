@@ -17,6 +17,8 @@
 #define SSD1306_I2C_ADDR       0x3c
 int digT1, digT2, digT3;
 int digP1, digP2, digP3, digP4, digP5, digP6, digP7, digP8, digP9;
+    int count = 0;
+    int looprate = 20 * 1000;
 #define I2C_SDA 6
 #define I2C_SCK 7
 #define I2C_POWER 0
@@ -29,6 +31,7 @@ float pres, radius, theta, psi;
 #include "./include/ssd1306.h"
 #include "./include/bmp280.c"
 #include "./include/qmc5883l.c"
+#include "./include/attitude.c"
 
 int main() {
     stdio_init_all();
@@ -45,38 +48,42 @@ int main() {
     //ws2812_program_init(0, 0, offset, WS2812_PIN);
     gpio_init(I2C_POWER); gpio_set_dir(I2C_POWER, GPIO_OUT); gpio_put(I2C_POWER, 1);
 
-    i2c_start();
-    sleep_ms(10);
-    ssd1306_init();
+    //i2c_start();
+    sleep_us(100);
+    //ssd1306_init();
     char disp_string[256] = "Hi There";
-    ssd1306_text(disp_string);
-    qmc5883_init();   
-    bmp280_cal();
+    //ssd1306_text(disp_string);
+    //qmc5883_init();   
+    //bmp280_cal();
     //spi interface setup
     //sdk spi, dma, ipterupt service
     float pitch, roll, yaw;
     
-    int count = 0;
+    //imu_init();
+    imu_startup();
+
     float prescal;
     while(1) {
         if(get_absolute_time() > systimenext) {
-           printf("%11.4f   ", 0.000001 * get_absolute_time());
-           systimenext = systimenext + 500000;
-           qmc5883_read();   
-           bmp280_read();
-	   if (count < 5)  prescal = pres;
+           printf("%11.4f    ", 0.000001 * get_absolute_time());
+           systimenext = systimenext + looprate;
            //i2c_scan();
+           //qmc5883_read();   
+           //bmp280_read();
+           //if (count < 5)  prescal = pres;
+	   spi_read();
            //    pio_sm_put_blocking(0, 0, 0x808080);
+	   
            int blue = gpio_get(LED_BLUE);
            if (blue == 0) blue = 1; else blue = 0;
            gpio_put(LED_BLUE, blue);
 
            sprintf(disp_string, "4 IMU %5d||1 %4.2f %4.2f %4.2f||1pres=%5dmb  %6.1f", 
               count/2, radius, theta, psi, (int)pres, (prescal-pres)/.038);
-           ssd1306_text(disp_string);
-	   ++count;
-	}
-	sleep_us(1000); //just in case the compiler doesn't
+           //ssd1306_text(disp_string);
+           ++count;
+        }
+	sleep_ms(1); //just in case the compiler doesn't
     }
     return 0;
 }
