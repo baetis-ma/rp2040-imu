@@ -11,28 +11,48 @@
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
 //#include "led3.pio.h"
+int count = 0;
 
-#define QMC5883L_I2C_ADDR  0x0d
-#define BMP280_I2C_ADDR       0x76
-#define SSD1306_I2C_ADDR       0x3c
+//setup hardware
+#define LED_BLUE   25
+#define LED_GREEN  16
+#define LED_RED    17
+#define SW         29
+//#define WS2812_PIN 16
+
+//init i2c
+#define I2C_SDA    6
+#define I2C_SCK    7
+#include "./include/i2c.h"
+
+//oled display
+#define I2C_POWER  0
+#define SSD1306_I2C_ADDR   0x3c
+#include "./include/ssd1306.h"
+
+//bmp280
 int digT1, digT2, digT3;
 int digP1, digP2, digP3, digP4, digP5, digP6, digP7, digP8, digP9;
-    int count = 0;
-    int looprate = 20 * 1000;
-#define I2C_SDA 6
-#define I2C_SCK 7
-#define I2C_POWER 0
-#define LED_BLUE 25
-#define LED_GREEN 16
-#define LED_RED 17
-//#define WS2812_PIN 16
 float pres, radius, theta, psi;
-#include "./include/i2c.h"
-#include "./include/ssd1306.h"
+#define BMP280_I2C_ADDR    0x76
 #include "./include/bmp280.c"
+
+//magnetometer
+#define QMC5883L_I2C_ADDR  0x0d
+int direction;
+int degrees;
+float declination =  -13.9;   //noaa declination
+float azoffset = -11.5;       //azimuth/2 offset
+char *azimuthstr[16] = {"N  ", "NNE", "NE ", "ENE", "E  ", "ESE", "SE ", "SSE", "S  ", "SSW", "SW ", "WSW", "W  ", "WNW", "NW ", "NNW" };
 #include "./include/qmc5883l.c"
+
+//intertal measurement unit
+float pitch = 0, roll = 0;
+float tau = 1.0;         //imu fusion filter time constant
+float rate = 0.50;      //rate of mpu6500 measurements
 #include "./include/attitude.c"
 
+int mode = 0;
 int main() {
     stdio_init_all();
     sleep_ms(2000);
@@ -47,43 +67,51 @@ int main() {
     //uint offset = pio_add_program(0, &ws2812_program);
     //ws2812_program_init(0, 0, offset, WS2812_PIN);
     gpio_init(I2C_POWER); gpio_set_dir(I2C_POWER, GPIO_OUT); gpio_put(I2C_POWER, 1);
+    gpio_init(SW); gpio_set_dir(SW, GPIO_IN); gpio_pull_up(SW);
 
-    //i2c_start();
-    sleep_us(100);
-    //ssd1306_init();
+    i2c_start();
+    sleep_us(1000);
+    ssd1306_init();
     char disp_string[256] = "Hi There";
-    //ssd1306_text(disp_string);
-    //qmc5883_init();   
-    //bmp280_cal();
+    ssd1306_text(disp_string);
+    qmc5883_init();   
+    bmp280_cal();
     //spi interface setup
     //sdk spi, dma, ipterupt service
-    float pitch, roll, yaw;
     
-    //imu_init();
-    imu_startup();
+    //imu_startup();
 
+    bool sw;
+    int looprate = (int)(rate / 0.000001);
     float prescal;
     while(1) {
         if(get_absolute_time() > systimenext) {
-           printf("%11.4f    ", 0.000001 * get_absolute_time());
            systimenext = systimenext + looprate;
            //i2c_scan();
-           //qmc5883_read();   
-           //bmp280_read();
-           //if (count < 5)  prescal = pres;
-	   spi_read();
+           qmc5883_read();   
+           bmp280_read();
+           if (count < 5)  prescal = pres;
+	   //spi_read();
            //    pio_sm_put_blocking(0, 0, 0x808080);
 	   
            int blue = gpio_get(LED_BLUE);
            if (blue == 0) blue = 1; else blue = 0;
            gpio_put(LED_BLUE, blue);
 
-           sprintf(disp_string, "4 IMU %5d||1 %4.2f %4.2f %4.2f||1pres=%5dmb  %6.1f", 
-              count/2, radius, theta, psi, (int)pres, (prescal-pres)/.038);
-           //ssd1306_text(disp_string);
+           if(mode == 0) sprintf(disp_string, "4    IMU||1mag field vetor=|1       %4.2f %4.2f %4.2f|1pres=  %5dmb %5.1f\'|pitch =        -12.3*|roll =          10.3*|systime =  %7.1fsec", 
+                       radius, theta, psi, (int)pres, (prescal-pres)/.038,  0.000001*get_absolute_time());
+	            else sprintf(disp_string, "4%3s    %3d*||elev %5.1f\'||pitch 12.3*||roll -11.5*", 
+                       azimuthstr[direction], degrees, (prescal-pres)/.038);
+           ssd1306_text(disp_string);
+           printf("%11.4f    ", 0.000001 * get_absolute_time());
+           printf ("pitch=%4d roll=%4d    radius=%5.2f theta=%5.2f psi=%5.2f    dir=%3s %3ddeg   pres=%.1f  %5.1f\n",
+               (int)pitch, (int)roll, radius, theta, psi, azimuthstr[direction], degrees, pres, (prescal-pres)/.038);
+
            ++count;
         }
-	sleep_ms(1); //just in case the compiler doesn't
+	if(0 == gpio_get(SW)) { mode = (++mode) % 2; count = 0; }
+	//sw = gpio_get(SW);
+	sleep_us(100); //just in case the compiler doesn't
     }
     return 0;
 }
