@@ -1,11 +1,8 @@
 
 void qmc5883_init() {
     uint8_t data[] = { 0x09, 0x01, 0x00, 0x01 };
-    //i2c_write(QMC5883L_I2C_ADDR, 0x09, 0x01); 
-    //i2c_write(QMC5883L_I2C_ADDR, 0x0a, 0x00); 
-    //i2c_write(QMC5883L_I2C_ADDR, 0x0b, 0x01); 
     i2c_write_blocking (i2c1, QMC5883L_I2C_ADDR, data, 4, false);
-
+    //read back
     data[0] = 0x09;
     i2c_write_blocking (i2c1, QMC5883L_I2C_ADDR, data, 1, false);
     i2c_read_blocking (i2c1, QMC5883L_I2C_ADDR, data, 4, false); 
@@ -22,7 +19,6 @@ int qmc5883_read () {
     regdata[0] = 0x00;
     i2c_write_blocking (i2c1, QMC5883L_I2C_ADDR, regdata, 1, false);
     i2c_read_blocking (i2c1, QMC5883L_I2C_ADDR, regdata, 6, false); 
-
     //for (int a =0; a<6;a++)printf("0x%02x ",regdata[a]);// printf("\n");
     
     int x = 256 * regdata[1] + regdata[0]; if(regdata[1]>=128) x = x - (1 << 16);
@@ -48,15 +44,7 @@ int qmc5883_read () {
     else psi = -1.0 * PI / 2;
 
     degrees = ((int)(360 + declination + (57.3 * psi)) % 360);
-    direction = (int) ((azoffset + degrees) / 22.5);
-    //printf ("pitch=%4d roll=%4d radius=%5.2f theta=%5.2f psi=%5.2f dir=%3d %3s pres=%.1f\n", 
-    //     (int)pitch, (int)roll, radius, theta, psi, direction, azimuthstrstr[direction], pres); 
+    direction = (int) (((int)(360 + degrees + 11.25)  % 360) / 22.5);
     return (0);
-    //float phi = 90 + 57.3 * atan(ymag/xmag);
-    //if (phi < xmag) phi = phi + 180;
-    //int phii = (int) (phi - caloff);
-    //phii = (360 + phii) % 360;
-    //printf("  phi = %7.2f\n",phi);
-    //return ( phii );
 }
 

@@ -4,6 +4,7 @@
 #include <time.h>
 #include <math.h>
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
 #include "pico/binary_info.h"
 #include "hardware/clocks.h"
 #include "hardware/i2c.h"
@@ -43,21 +44,42 @@ int direction;
 int degrees;
 float declination =  -13.9;   //noaa declination
 float azoffset = -11.5;       //azimuth/2 offset
-char *azimuthstr[16] = {"N  ", "NNE", "NE ", "ENE", "E  ", "ESE", "SE ", "SSE", "S  ", "SSW", "SW ", "WSW", "W  ", "WNW", "NW ", "NNW" };
+char *azimuthstr[16] = {"N  ", "NNE", "NE ", "ENE", "E  ", "ESE", "SE ", "SSE", "S  ", "SSW",
+                        "SW ", "WSW", "W  ", "WNW", "NW ", "NNW" };
 #include "./include/qmc5883l.c"
 
 //intertal measurement unit
 float pitch = 0, roll = 0;
-float tau = 1.0;         //imu fusion filter time constant
-float rate = 0.50;      //rate of mpu6500 measurements
+float tau = 0.5;         //imu fusion filter time constant
+float rate = 0.02;      //rate of mpu6500 measurements
 #include "./include/attitude.c"
+
+void core1_entry() {
+    sleep_ms(1000);
+    absolute_time_t systimenext0 = 5000000;
+    imu_startup();
+    sleep_ms(1000);
+    int looprate0 = (int)(rate / 0.000001);
+    while(1) {
+        if(get_absolute_time() > systimenext0) {
+           systimenext0 = systimenext0 + looprate0;
+	   //printf("core1 %f\n", 0.000001*systimenext0);
+	   spi_read();
+        }
+	//sleep_us(10); //just in case the compiler doesn't
+    }
+}
 
 int mode = 0;
 int main() {
     stdio_init_all();
     sleep_ms(2000);
     printf("waited 2 seconds\n");
-    absolute_time_t systimenext = 0;
+    multicore_launch_core1(core1_entry);
+
+    int looprate = (int)(1 / 0.000001);
+    absolute_time_t systimenext = 4000000;
+    float prescal;
 
     //gpios init
     gpio_init(LED_BLUE); gpio_set_dir(LED_BLUE, GPIO_OUT); gpio_put(LED_BLUE, 1);
@@ -69,28 +91,20 @@ int main() {
     gpio_init(I2C_POWER); gpio_set_dir(I2C_POWER, GPIO_OUT); gpio_put(I2C_POWER, 1);
     gpio_init(SW); gpio_set_dir(SW, GPIO_IN); gpio_pull_up(SW);
 
-    i2c_start();
-    sleep_us(1000);
-    ssd1306_init();
+    //i2c_start();
+    //sleep_us(1000);
+    //ssd1306_init();
     char disp_string[256] = "Hi There";
-    ssd1306_text(disp_string);
-    qmc5883_init();   
-    bmp280_cal();
-    //spi interface setup
-    //sdk spi, dma, ipterupt service
-    
-    //imu_startup();
-
-    bool sw;
-    int looprate = (int)(rate / 0.000001);
-    float prescal;
+    //ssd1306_text(disp_string);
+    //qmc5883_init();   
+    //bmp280_cal();
     while(1) {
         if(get_absolute_time() > systimenext) {
            systimenext = systimenext + looprate;
            //i2c_scan();
-           qmc5883_read();   
-           bmp280_read();
-           if (count < 5)  prescal = pres;
+           //qmc5883_read();   
+           //bmp280_read();
+           //if (count < 5)  prescal = pres;
 	   //spi_read();
            //    pio_sm_put_blocking(0, 0, 0x808080);
 	   
@@ -98,20 +112,20 @@ int main() {
            if (blue == 0) blue = 1; else blue = 0;
            gpio_put(LED_BLUE, blue);
 
-           if(mode == 0) sprintf(disp_string, "4    IMU||1mag field vetor=|1       %4.2f %4.2f %4.2f|1pres=  %5dmb %5.1f\'|pitch =        -12.3*|roll =          10.3*|systime =  %7.1fsec", 
+           if(mode == 0) sprintf(disp_string, "4    IMU||1mag field vetor=|1       %4.2f %4.2f %4.2f\
+                       |1pres=  %5dmb %5.1f\'|pitch =        -12.3*|roll =          10.3*|systime =  %7.1fsec", 
                        radius, theta, psi, (int)pres, (prescal-pres)/.038,  0.000001*get_absolute_time());
 	            else sprintf(disp_string, "4%3s    %3d*||elev %5.1f\'||pitch 12.3*||roll -11.5*", 
                        azimuthstr[direction], degrees, (prescal-pres)/.038);
-           ssd1306_text(disp_string);
-           printf("%11.4f    ", 0.000001 * get_absolute_time());
+           //ssd1306_text(disp_string);
+           printf("%11.4f  %4d  ", 0.000001 * get_absolute_time(), count);
            printf ("pitch=%4d roll=%4d    radius=%5.2f theta=%5.2f psi=%5.2f    dir=%3s %3ddeg   pres=%.1f  %5.1f\n",
                (int)pitch, (int)roll, radius, theta, psi, azimuthstr[direction], degrees, pres, (prescal-pres)/.038);
 
            ++count;
         }
-	if(0 == gpio_get(SW)) { mode = (++mode) % 2; count = 0; }
-	//sw = gpio_get(SW);
-	sleep_us(100); //just in case the compiler doesn't
+	if(0 == gpio_get(SW) && count > 5) { mode = (++mode) % 2; count = 0; }
+	//sleep_ms(10); //just in case the compiler doesn't
     }
     return 0;
 }

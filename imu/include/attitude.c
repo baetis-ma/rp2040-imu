@@ -82,7 +82,7 @@ void spi_read() {
 
     absolute_time_t start = get_absolute_time(), spi_read, trig_calc;
     // Start reading acceleration registers from register 0x3B for 6 bytes
-    // time time reading could be halved by makeing both accel and gyro meas at same time
+    // reading exec time could be halved by reading both accel,  gyro and temp at same time
     read_registers(0x3B, buffer, 6);
     for (int i = 0; i < 3; i++) {
         daccel[i] = (buffer[i * 2] << 8 | buffer[(i * 2) + 1]);
@@ -96,7 +96,15 @@ void spi_read() {
         gyro[i] = 1000 * (float)dgyro[i]/(1<<15) - cgyro[i];
     }
 
-    if (count == 10) {
+    if (count < 2) {
+       caccel[0] = 0;
+       caccel[1] = 0;
+       caccel[2] = 0;
+       cgyro[0] = 0;
+       cgyro[1] = 0;
+       cgyro[2] = 0;
+    }
+    if (count == 3) {
        caccel[0] = accel[0];
        caccel[1] = accel[1];
        caccel[2] = accel[2] - 1;
@@ -111,18 +119,16 @@ void spi_read() {
     //read_registers(0x41, buffer, 2);
     //temp = 32 + 1.8 * (float) (16.53 + (buffer[0] << 8 | buffer[1]) / 340.0);
 
-    spi_read = get_absolute_time() - start;
-    start = get_absolute_time();
+    //spi_read = get_absolute_time() - start;
+    //start = get_absolute_time();
 
-    //asin
     if(accel[0] > 1.00) accel[0] = 1.0; if(accel[0] < -1.00) accel[0] = -1.0;
     if(accel[1] > 1.00) accel[1] = 1.0; if(accel[1] < -1.00) accel[1] = -1.0;
 
     pitch = frac * pitch + rate * gyro[1] - ifrac * 57.3 * asin(accel[0]);
     roll  = frac * roll  + rate * gyro[0] + ifrac * 57.3 * asin(accel[1]);
 
-    trig_calc = get_absolute_time() - start;
-
+    //trig_calc = get_absolute_time() - start;
     //printf("%8.6f %8.6f", 0.000001 *spi_read,  0.000001 *trig_calc);
     //printf("  %9.4f %9.4f    %9.4f %9.4f\n", accel[0], gyro[1], pitch, roll);
 }

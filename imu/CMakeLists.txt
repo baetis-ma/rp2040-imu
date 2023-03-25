@@ -18,6 +18,7 @@ pico_generate_pio_header(picocode
 
 target_link_libraries(picocode
      pico_stdlib
+     pico_multicore
      hardware_pio
      hardware_i2c     
      hardware_spi     

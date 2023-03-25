@@ -4,7 +4,6 @@ static void bmp280_cal () {
     i2c_write_blocking(i2c1, BMP280_I2C_ADDR, regdata, 1, false);
     i2c_read_blocking (i2c1, BMP280_I2C_ADDR, regdata, 24, false);
     int n;
-    //for(n = 0; n < 24; n++) printf("%02x ", regdata[n]); printf("\n");
     digT1 = regdata[0] + 256 * regdata[1];
     digT2 = regdata[2] + 256 * regdata[3];   if (digT2 > 32767)digT2 = digT2 - 65536;
     digT3 = regdata[4] + 256 * regdata[5];   if (digT3 > 32767)digT3 = digT3 - 65536;
@@ -21,14 +20,17 @@ static void bmp280_cal () {
 
 int bmp280_read () {
     uint8_t regdata[12];
+
     //regdata[0] = 0xd0;
     //i2c_write_blocking(i2c1, BMP280_I2C_ADDR, regdata, 1, false); 
     //i2c_read_blocking(i2c1, BMP280_I2C_ADDR, regdata, 1, false);
     //printf("id = 0x%02x\n", regdata[0]);
+
     //reset
     regdata[0] = 0xe0;
     regdata[1] = 0xb6;
     i2c_write_blocking(i2c1, BMP280_I2C_ADDR, regdata, 2, false);
+
     //regdata[0] = 0xf3;
     //i2c_write_blocking(i2c1, BMP280_I2C_ADDR, regdata, 1, false); 
     //i2c_read_blocking(i2c1, BMP280_I2C_ADDR, regdata, 1, false);
@@ -38,27 +40,14 @@ int bmp280_read () {
     regdata[1] = 0x5f;
     regdata[2] = 0x1c;
     i2c_write_blocking(i2c1, BMP280_I2C_ADDR, regdata, 3, false);
-
-    //regdata[0] = 0xf3;
-    //i2c_write_blocking(i2c1, BMP280_I2C_ADDR, regdata, 1, false); 
-    //i2c_read_blocking(i2c1, BMP280_I2C_ADDR, regdata, 1, false);
-    //printf("status = 0x%02x\n", regdata[0]);
-
     sleep_ms(200);
-    //regdata[0] = 0xf3;
-    //i2c_write_blocking(i2c1, BMP280_I2C_ADDR, regdata, 1, false); 
-    //i2c_read_blocking(i2c1, BMP280_I2C_ADDR, regdata, 1, false);
-    //printf("status = 0x%02x\n", regdata[0]);
 
     regdata[0] = 0xf7;
     i2c_write_blocking(i2c1, BMP280_I2C_ADDR, regdata, 1, false); 
     i2c_read_blocking(i2c1, BMP280_I2C_ADDR, regdata, 6, false);
-    //int n;
-    //for(n = 0; n < 6; n++) printf("%02x ", regdata[n]); printf("\n");
     int adcp = 4096 * regdata[0] + 16*regdata[1] + regdata[2]/16;
     int adct = 4096 * regdata[3] + 16*regdata[4] + regdata[5]/16;
     
-    //printf ("0x%08x  0x%08x   ", adcp, adct);
     //calculate temperature
     double var1, var2, ctemp;
     int tfine;
@@ -67,6 +56,7 @@ int bmp280_read () {
             (((double)adct)/131072.0 - ((double)digT1)/8192.0)*(double)digT3);
     tfine = (int) var1+var2;
     ctemp = (float) tfine/5120.0;
+
     //calculate pressure
     double p;
     var1 = ((double)tfine/2.0) - 64000.0;
@@ -80,7 +70,6 @@ int bmp280_read () {
     var1 = ((double)digP9)*p*p/2147483648.0;
     var2 = p*((double)digP8)/32768.0;
     pres = (p + (var1 + var2 + ((double)digP7))/16.0)/100;
-    //printf(" pres = %.1f\n", pres);
     return (0);
 }
 
