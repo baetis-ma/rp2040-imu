@@ -12,7 +12,7 @@
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
 //#include "led3.pio.h"
-int count = 0;
+int count = 0, count1 = 0;
 
 //setup hardware
 #define LED_BLUE   25
@@ -51,7 +51,7 @@ char *azimuthstr[16] = {"N  ", "NNE", "NE ", "ENE", "E  ", "ESE", "SE ", "SSE", 
 //intertal measurement unit
 float pitch = 0, roll = 0;
 float tau = 0.5;         //imu fusion filter time constant
-float rate = 0.02;      //rate of mpu6500 measurements
+float rate = 0.001;      //rate of mpu6500 measurements
 #include "./include/attitude.c"
 
 void core1_entry() {
@@ -65,6 +65,7 @@ void core1_entry() {
            systimenext0 = systimenext0 + looprate0;
 	   //printf("core1 %f\n", 0.000001*systimenext0);
 	   spi_read();
+	   ++count1;
         }
 	//sleep_us(10); //just in case the compiler doesn't
     }
@@ -77,7 +78,7 @@ int main() {
     printf("waited 2 seconds\n");
     multicore_launch_core1(core1_entry);
 
-    int looprate = (int)(1 / 0.000001);
+    int looprate = (int)(0.5 / 0.000001);
     absolute_time_t systimenext = 4000000;
     float prescal;
 
@@ -118,10 +119,11 @@ int main() {
 	            else sprintf(disp_string, "4%3s    %3d*||elev %5.1f\'||pitch 12.3*||roll -11.5*", 
                        azimuthstr[direction], degrees, (prescal-pres)/.038);
            //ssd1306_text(disp_string);
-           printf("%11.4f  %4d  ", 0.000001 * get_absolute_time(), count);
+           printf("%11.4f  %4d %4d ", 0.000001 * get_absolute_time(), count, count1);
            printf ("pitch=%4d roll=%4d    radius=%5.2f theta=%5.2f psi=%5.2f    dir=%3s %3ddeg   pres=%.1f  %5.1f\n",
                (int)pitch, (int)roll, radius, theta, psi, azimuthstr[direction], degrees, pres, (prescal-pres)/.038);
 
+	   count1 = 0;
            ++count;
         }
 	if(0 == gpio_get(SW) && count > 5) { mode = (++mode) % 2; count = 0; }
