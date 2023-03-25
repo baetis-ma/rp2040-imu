@@ -2,10 +2,10 @@
 
 ## RPi PICO / RP2040 IMU
 
-#### The IMU shown here uses two native rp2040 buses, one SPI and one I2C, to support a 6 axis accelerometer/gyroscope, a 3 axis magnetometer, a pressure measurement chip, a 1 inch OLED display and a momentary contact switch. This implementation uses the PICO SDK and programs written in C, a Seeedi np2040, mpu6500, qmc5883, bmp280 and a ssd1306 module breadboard assemblys. OLED screen updates are made twice a second and include fused filtered accelerometer/gyroscope pitch/roll, magnetic heading and a pressure based altitude measurements. A usb serial port can supply higher measurement rates (~50Hz): magnetic readings up to 200HZ, altitude to 100Hz and pitch/roll well over 1KHz. 
+#### The IMU shown here uses two native rp2040 buses, one SPI and one I2C, to support a 6 axis accelerometer/gyroscope, a 3 axis magnetometer, an atmospheric  pressure measurement chip, a 1 inch OLED display and a momentary contact switch. This implementation uses the PICO SDK and programs written in C, a Seeedi np2040, mpu6500, qmc5883, bmp280 and a ssd1306 module breadboard assemblys. OLED screen updates are made twice a second and include fused filtered accelerometer/gyroscope pitch/roll, magnetic heading and a pressure based altitude measurements. A usb serial port can supply higher data measurement rates: magnetic readings up to 200HZ, altitude to 100Hz and pitch/roll at over 1KHz. 
 #### The OLED Display of the summary data is shown below, it includes direction azimuth, direction in degrees, elevation in feet, pitch in degrees and roll in degrees.
 ![IMG_20230323_105721661](https://user-images.githubusercontent.com/32702163/227251581-0e927ba0-ca8e-4c49-a5fd-5fabf607c2ee.jpg)
-#### Pushing the momentary contact SW0 switch changes to an alternate display and zeros out the accelerometer, gyroscope and altitude calibration offsets. This display provide a few more details more details; the magnetic field vector components - magnitude (normalized to 1g) as well as the calculated theta and psi in radians. The pressure is shown in millibars as well as altitude change since last calibrate. The pitch and roll are from the mpu6500 are shown in degrees and the system time in seconds.
+#### Pushing the momentary contact SW0 switch changes to an alternate display and zeros out the accelerometer, gyroscope and altitude calibration offsets. This display provides a few more details; the magnetic field vector components - magnitude (normalized to 1g) as well as the calculated theta and psi in radians. The pressure is shown in millibars as well as altitude change since last calibrate. The pitch and roll are from the mpu6500 are shown in degrees and the system time in seconds.
 ![IMG_20230323_105805364](https://user-images.githubusercontent.com/32702163/227251731-f382c114-112a-45ad-b3fe-02ca2322ffc2.jpg)
 ## Sections
 ## Gyroscope and Accelerometer
@@ -17,7 +17,7 @@
 
 ## Gyroscope and Accelerometer
 
-#### The mpu6500 is a combined three axis gyroscope and three axis accelerometer. We will be using this to supply 100 samples of each measurement every second. The measurements from this device have a strong tendency to drift and the accelerometer measurements are relatively noisy in the short term and stable in the long term. The gyroscope and accelerometer measurements are filtered (high pass for gyroscope and low pass for accelerometer) and combined. The results are pitch (forward/backward tilt) and roll (left/right tilt) measurements that filter out the low frequency drift of the gyroscope measurements and the frequency noise of the accelerometers.
+#### The mpu6500 is a combined three axis gyroscope and three axis accelerometer. Which is used to supply a 1000 samples of each measurement every second. The gyroscope measurements from this device have a strong tendency to drift and the accelerometer measurements tend to be relatively noisy in the short term and stable in the long term. The gyroscope and accelerometer measurements are filtered (high pass for gyroscope and low pass for accelerometer) and combined. The results are pitch (forward/backward tilt) and roll (left/right tilt) measurements that filter out the low frequency drift of the gyroscope measurements and the frequency noise of the accelerometers.
 #### The following code lines show the basis of the pitch and roll calculation. The rate is the number of spi (12 byte) reads per second. The tau is the time constant of the gyroscope high frequency and also the time constant of the accelerometer low pass filter in seconds. Fusion_T is the digital filter multiplier for the high frequency dsp filter and (1 - Fusion_T) is the dsp multiplier for the low frequency dsp filter.
 ```C
     float rate = 0.01;      //sample rate in seconds
@@ -27,10 +27,8 @@
     pitch = Fusion_T * (pitch + xGyro) + (1 - Fusion_T) *  57.3 * asin(yAccl);
     roll =  Fusion_T * (roll  + yGyro) + (1 - Fusion_T) * -57.3 * asin(xAccl);
 ```
-    
-#### The pitch and roll calculations need to be implemented with forethought. The spi measurements must be calculated at a constant rate, relatively frequently (at least 100 times per second) and require about a dozen floating point and two trigonometric calculations per loop (which are slow on this device - no fpu). These measurements can not be in the main() while loop with the i2c measurements because of the time required to serve the i2c devices (especially the OLED). Off loading the spi measurements to the second core is probably the least painful solution (it might also ne possible by using mpu6500 fifo, to dma with isr).
-
-#### The first step in adding this functionality will be to incorporate it into the same while loop as the i2c functions in order to debug the code. The floating point section of the code will be timed and optimized, with the hope of reaching 1000 samples per second. 
+   
+#### The pitch and roll calculations need to be implemented with forethought. The spi measurements must be calculated at a constant rate with no imteruptions and relatively frequently (at least 100 times per second). Each measurement requires several spi reads and about a dozen floating point and two trigonometric calculations per loop (which are slow on this device - no fpu). These measurements can not be in the main() while loop with the i2c measurements because of the time required to serve the i2c devices (especially the OLED). Off loading the spi measurements to the second core is probably the least painful solution (it might also ne possible by using mpu6500 fifo, to dma with isr).
 
 #### Here is how a sample of data collected by rotating the circuit board through about 90 degree rotations on my desk looks:
 
@@ -51,7 +49,7 @@
 ![pitch](https://user-images.githubusercontent.com/32702163/226628863-3cab0088-eb16-4a52-90a1-b1ca5994b614.png)
 
 #
-#### The execution time result for the mpu6500 read/calculation loop is about 500 usec for the spi data read; the pitch and roll floating point and trigonometric calculations clock in at about 60usec. With loop execution time of <1msec, running a 1KHz pitch/roll calculation rate should be no problem.
+#### The execution time result for the mpu6500 read/calculation loop was about 500 usec for the spi data read; the pitch and roll floating point and trigonometric calculations clock in at about 60usec. With loop execution time of 1msec, running a 1KHz pitch/roll calculation rate should be no problem (it did work fine to 1.8KHz).
 
 ##### *Higher rates - up to 8K - are likely possible by optimizing program; 2K easy, higher rates would likely require using mcu6500 internal fifo. 
 
