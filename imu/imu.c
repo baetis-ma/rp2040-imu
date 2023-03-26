@@ -92,20 +92,20 @@ int main() {
     gpio_init(I2C_POWER); gpio_set_dir(I2C_POWER, GPIO_OUT); gpio_put(I2C_POWER, 1);
     gpio_init(SW); gpio_set_dir(SW, GPIO_IN); gpio_pull_up(SW);
 
-    //i2c_start();
-    //sleep_us(1000);
-    //ssd1306_init();
+    i2c_start();
+    sleep_us(1000);
+    ssd1306_init();
     char disp_string[256] = "Hi There";
-    //ssd1306_text(disp_string);
-    //qmc5883_init();   
-    //bmp280_cal();
+    ssd1306_text(disp_string);
+    qmc5883_init();   
+    bmp280_cal();
     while(1) {
         if(get_absolute_time() > systimenext) {
            systimenext = systimenext + looprate;
            //i2c_scan();
-           //qmc5883_read();   
-           //bmp280_read();
-           //if (count < 5)  prescal = pres;
+           qmc5883_read();   
+           bmp280_read();
+           if (count < 5)  prescal = pres;
 	   //spi_read();
            //    pio_sm_put_blocking(0, 0, 0x808080);
 	   
@@ -118,7 +118,7 @@ int main() {
                        radius, theta, psi, (int)pres, (prescal-pres)/.038,  0.000001*get_absolute_time());
 	            else sprintf(disp_string, "4%3s    %3d*||elev %5.1f\'||pitch 12.3*||roll -11.5*", 
                        azimuthstr[direction], degrees, (prescal-pres)/.038);
-           //ssd1306_text(disp_string);
+           ssd1306_text(disp_string);
            printf("%11.4f  %4d %4d ", 0.000001 * get_absolute_time(), count, count1);
            printf ("pitch=%4d roll=%4d    radius=%5.2f theta=%5.2f psi=%5.2f    dir=%3s %3ddeg   pres=%.1f  %5.1f\n",
                (int)pitch, (int)roll, radius, theta, psi, azimuthstr[direction], degrees, pres, (prescal-pres)/.038);
